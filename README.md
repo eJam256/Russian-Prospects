@@ -1,5 +1,5 @@
 # Russian-Prospects
-This is a repository for everything related to any of my Russian Prospects projects. 
+This is a repository for everything related to any of my Russian Prospects projects. All data is from QuantHockey, Elite Prospects, and Gabe Foley
 
 ## Player Cards
 This repository includes the data for the prospect player cards as well as the original RStuido analysis and final graphics. The player cards 
