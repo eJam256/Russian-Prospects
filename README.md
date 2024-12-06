@@ -6,4 +6,3 @@ This repository includes the code for the prospect model, a link to the data is 
 
 ## Future Plans
 Any future expansions of work with Russian prospects will also be uploaded here including possible player cards and interactive web app. 
-future model to predict NHL success. 
