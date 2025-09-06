@@ -1,0 +1,626 @@
+---
+title: "Russian_Prospects_v1_FINAL"
+output: html_document
+date: "2025-08-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r package installation}
+library(car)
+library(pscl)
+library(caret)
+library(tidyverse)
+library(googlesheets4)
+library(splines)
+library(forecast)
+library(tidymodels)
+library(ggplot2)
+```
+
+```{r data download}
+gs4_deauth()
+
+all_players <- "https://docs.google.com/spreadsheets/d/1zgfn3G9yraz60WqHjZUGPQMBlPWdHz0fpFVimARD_CE/edit?usp=sharing"
+prospects <- read_sheet(all_players, sheet = "Prospects")
+NHL_players <- read_sheet(all_players, sheet = "NHLers")
+control <- read_sheet(all_players, sheet = "Control")
+control_actual <- read_sheet(all_players, sheet = "Control Actual")
+
+#work_set has *all* data
+work_set <- bind_rows(list(prospects, NHL_players, control, control_actual))
+work_set <- work_set %>% mutate(League_ID = as.factor(League_ID))
+
+#work2_set does *not* have prospects
+work2_set <- bind_rows(list(NHL_players, control))
+work2_set <- work2_set %>% mutate(League_ID = as.factor(League_ID))
+
+#work3_set does *not* have prospects *and* has control actual
+work3_set <- bind_rows(list(NHL_players, control, control_actual))
+work3_set <- work3_set %>% mutate(League_ID = as.factor(League_ID))
+
+forward_set <- work_set |> filter (Position == 'LW' | Position == 'RW' | Position == 'C')
+
+forward2_set <- work2_set %>% filter(Position == 'LW' | Position == 'RW' | Position == 'C')
+
+forward_test <- bind_rows(list(control, control_actual))
+forward_test <- forward_test %>% mutate(League_ID = as.factor(League_ID))
+forward_test <- forward_test |> filter (Position == 'RW' | Position == 'LW' | Position == 'C')
+  
+defense_set <- work_set |> filter(Position == 'LHD' | Position == 'RHD')
+def2_set <- work2_set |> filter(Position == 'LHD' | Position == 'RHD')
+
+prospects <- prospects %>% mutate(League_ID = as.factor(League_ID))
+
+```
+
+
+```{r, echo=FALSE}
+svg("all_points.svg")
+plot(work2_set$Draft_Distance, work2_set$Points, xlab = "Draft Distance", ylab = "Points")
+title("Points by Draft Distance")
+dev.off()
+```
+
+```{r}
+svg("def_forward_graph.svg")
+par(mfrow = c(2, 2))
+plot(forward2_set$Draft_Distance, forward2_set$Points, xlab = "Draft Distance", ylab = "Points", main = "Forward Points by Draft Distance", cex.main = 0.95)
+plot(def2_set$Draft_Distance, def2_set$Points, xlab = "Draft Distance", ylab = "Points", main = "Defense Points by Draft Distance", cex.main = 0.95)
+dev.off()
+```
+
+Weighted Points
+```{r}
+MHL_set <- work_set |> filter(League_ID == 1)
+MHL_points <- sum(MHL_set$Points)
+
+KHL_set <- work_set |> filter(League_ID == 2)
+KHL_points <- sum(KHL_set$Points)
+
+VHL_set <- work_set |> filter(League_ID == 3)
+VHL_points <- sum(VHL_set$Points)
+
+NHL_set <- work_set |> filter(League_ID == 4)
+NHL_points <- sum(NHL_set$Points)
+
+CHL_set <- work_set |> filter(League_ID == 5)
+CHL_points <- sum(CHL_set$Points)
+
+AHL_set <- work_set |> filter(League_ID == 6)
+AHL_points <- sum(AHL_set$Points)
+
+all_points <- MHL_points + KHL_points + VHL_points + NHL_points + CHL_points + AHL_points
+
+MHL_Weight <- MHL_points/all_points
+KHL_Weight <- KHL_points/all_points
+VHL_Weight <- VHL_points/all_points
+NHL_Weight <- NHL_points/all_points
+CHL_Weight <- CHL_points/all_points
+AHL_Weight <- AHL_points/all_points
+
+
+MHL_set <- MHL_set |> mutate(Weight_Points = MHL_set$Points * MHL_Weight)
+MHL_set
+KHL_set <- KHL_set |> mutate(Weight_Points = KHL_set$Points * KHL_Weight)
+KHL_set
+VHL_set <- VHL_set |> mutate(Weight_Points = VHL_set$Points * VHL_Weight)
+VHL_set
+NHL_set <- NHL_set |> mutate(Weight_Points = NHL_set$Points * NHL_Weight)
+NHL_set
+CHL_set <- CHL_set |> mutate(Weight_Points = CHL_set$Points * CHL_Weight)
+CHL_set
+AHL_set <- AHL_set |> mutate(Weight_Points = AHL_set$Points * AHL_Weight)
+AHL_set
+
+weight_work <- bind_rows(MHL_set, KHL_set, VHL_set, NHL_set, CHL_set, AHL_set)
+
+
+MHL2_set <- work2_set |> filter(League_ID == 1)
+MHL2_points <- sum(MHL2_set$Points)
+
+KHL2_set <- work2_set |> filter(League_ID == 2)
+KHL2_points <- sum(KHL2_set$Points)
+
+VHL2_set <- work2_set |> filter(League_ID == 3)
+VHL2_points <- sum(VHL2_set$Points)
+
+NHL2_set <- work2_set |> filter(League_ID == 4)
+NHL2_points <- sum(NHL2_set$Points)
+
+CHL2_set <- work2_set |> filter(League_ID == 5)
+CHL2_points <- sum(CHL2_set$Points)
+
+AHL2_set <- work2_set |> filter(League_ID == 6)
+AHL2_points <- sum(AHL2_set$Points)
+
+all_points2 <- MHL2_points + KHL2_points + VHL2_points + NHL2_points + CHL2_points + AHL2_points
+
+MHL2_Weight <- MHL2_points/all_points2
+KHL2_Weight <- KHL2_points/all_points2
+VHL2_Weight <- VHL2_points/all_points2
+NHL2_Weight <- NHL2_points/all_points2
+CHL2_Weight <- CHL2_points/all_points2
+AHL2_Weight <- AHL2_points/all_points2
+
+MHL2_set <- MHL2_set |> mutate(Weight_Points = MHL2_set$Points * MHL2_Weight)
+KHL2_set <- KHL2_set |> mutate(Weight_Points = KHL2_set$Points * KHL2_Weight)
+VHL2_set <- VHL2_set |> mutate(Weight_Points = VHL2_set$Points * VHL2_Weight)
+NHL2_set <- NHL2_set |> mutate(Weight_Points = NHL2_set$Points * NHL2_Weight)
+CHL2_set <- CHL2_set |> mutate(Weight_Points = CHL2_set$Points * CHL2_Weight)
+AHL2_set <- AHL2_set |> mutate(Weight_Points = AHL2_set$Points * AHL2_Weight)
+
+weight_work2 <- bind_rows(MHL2_set, KHL2_set, VHL2_set, NHL2_set, CHL2_set, AHL2_set)
+
+MHL3_set <- work3_set |> filter(League_ID == 1)
+MHL3_points <- sum(MHL3_set$Points)
+
+KHL3_set <- work3_set |> filter(League_ID == 2)
+KHL3_points <- sum(KHL3_set$Points)
+
+VHL3_set <- work3_set |> filter(League_ID == 3)
+VHL3_points <- sum(VHL3_set$Points)
+
+NHL3_set <- work3_set |> filter(League_ID == 4)
+NHL3_points <- sum(NHL3_set$Points)
+
+CHL3_set <- work3_set |> filter(League_ID == 5)
+CHL3_points <- sum(CHL3_set$Points)
+
+AHL3_set <- work3_set |> filter(League_ID == 6)
+AHL3_points <- sum(AHL3_set$Points)
+
+all_points3 <- MHL3_points + KHL3_points + VHL3_points + NHL3_points + CHL3_points + AHL3_points
+
+MHL3_Weight <- MHL3_points/all_points3
+KHL3_Weight <- KHL3_points/all_points3
+VHL3_Weight <- VHL3_points/all_points3
+NHL3_Weight <- NHL3_points/all_points3
+CHL3_Weight <- CHL3_points/all_points3
+AHL3_Weight <- AHL3_points/all_points3
+
+MHL3_set <- MHL3_set |> mutate(Weight_Points = MHL3_set$Points * MHL3_Weight)
+KHL3_set <- KHL3_set |> mutate(Weight_Points = KHL3_set$Points * KHL3_Weight)
+VHL3_set <- VHL3_set |> mutate(Weight_Points = VHL3_set$Points * VHL3_Weight)
+NHL3_set <- NHL3_set |> mutate(Weight_Points = NHL3_set$Points * NHL3_Weight)
+CHL3_set <- CHL3_set |> mutate(Weight_Points = CHL3_set$Points * CHL3_Weight)
+AHL3_set <- AHL3_set |> mutate(Weight_Points = AHL3_set$Points * AHL3_Weight)
+
+weight_work3 <- bind_rows(MHL3_set, KHL3_set, VHL3_set, NHL3_set, CHL3_set, AHL3_set)
+
+
+```
+
+Forward Subsets
+```{r}
+fy1 <- subset(forward2_set, Draft_Distance == 1)
+fy2 <- subset(forward2_set, Draft_Distance == 2)
+fy3 <- subset(forward2_set, Draft_Distance == 3)
+fy4 <- subset(forward2_set, Draft_Distance == 4)
+fy5 <- subset(forward2_set, Draft_Distance == 5)
+fy6 <- subset(forward2_set, Draft_Distance == 6)
+fy7 <- subset(forward2_set, Draft_Distance == 7)
+fy8 <- subset(forward2_set, Draft_Distance == 8)
+fy9 <- subset(forward2_set, Draft_Distance == 9)
+fy10 <- subset(forward2_set, Draft_Distance == 10)
+fy11 <- subset(forward2_set, Draft_Distance == 11)
+fy12 <- subset(forward2_set, Draft_Distance == 12)
+
+weight_forward2 <- weight_work2 |> filter(Position == 'RW' | Position == 'LW' | Position == 'C')
+wfy1 <- subset(weight_forward2, Draft_Distance == 1)
+wfy2 <- subset(weight_forward2, Draft_Distance == 2)
+wfy3 <- subset(weight_forward2, Draft_Distance == 3)
+wfy4 <- subset(weight_forward2, Draft_Distance == 4)
+wfy5 <- subset(weight_forward2, Draft_Distance == 5)
+wfy6 <- subset(weight_forward2, Draft_Distance == 6)
+wfy7 <- subset(weight_forward2, Draft_Distance == 7)
+wfy8 <- subset(weight_forward2, Draft_Distance == 8)
+wfy9 <- subset(weight_forward2, Draft_Distance == 9)
+wfy10 <- subset(weight_forward2, Draft_Distance == 10)
+wfy11 <- subset(weight_forward2, Draft_Distance == 11)
+wfy12 <- subset(weight_forward2, Draft_Distance == 12)
+```
+
+Forward Averages
+```{r}
+#Unweighted
+avg_fy1 <- mean(fy1$Points)
+avg_fy2 <- mean(fy2$Points)
+avg_fy3 <- mean(fy3$Points)
+avg_fy4 <- mean(fy4$Points)
+avg_fy5 <- mean(fy5$Points)
+avg_fy6 <- mean(fy6$Points)
+avg_fy7 <- mean(fy7$Points)
+avg_fy8 <- mean(fy8$Points)
+avg_fy9 <- mean(fy9$Points)
+avg_fy10 <- mean(fy10$Points)
+avg_fy11 <- mean(fy11$Points)
+avg_fy12 <- mean(fy12$Points)
+
+#Weighted
+wavg_fy1 <- mean(wfy1$Weight_Points)
+wavg_fy2 <- mean(wfy2$Weight_Points)
+wavg_fy3 <- mean(wfy3$Weight_Points)
+wavg_fy4 <- mean(wfy4$Weight_Points)
+wavg_fy5 <- mean(wfy5$Weight_Points)
+wavg_fy6 <- mean(wfy6$Weight_Points)
+wavg_fy7 <- mean(wfy7$Weight_Points)
+wavg_fy8 <- mean(wfy8$Weight_Points)
+wavg_fy9 <- mean(wfy9$Weight_Points)
+wavg_fy10 <- mean(wfy10$Weight_Points)
+wavg_fy11 <- mean(wfy11$Weight_Points)
+wavg_fy12 <- mean(wfy12$Weight_Points)
+```
+
+Unweighted Dataset
+```{r}
+forward_points <- c(avg_fy1, avg_fy2, avg_fy3, avg_fy4, avg_fy5, avg_fy6)
+distance <- c(1, 2, 3, 4, 5, 6)
+#real averages
+forward_points_actual <- c(forward_points, 13.47, 12.5, 11.21, 13, 13, 4)
+#draft distance
+distance2 <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+```
+
+Weighted Dataset
+```{r}
+weighted_forward_points <- c(wavg_fy1, wavg_fy2, wavg_fy3, wavg_fy4, wavg_fy5, wavg_fy6)
+weighted_forward_points_actual <- c(weighted_forward_points, wavg_fy7, wavg_fy8, wavg_fy9, wavg_fy10, wavg_fy11, wavg_fy12)
+
+```
+
+Unweighted Forward Naive
+```{r}
+forward_naive <- naive(forward_points, h = 6)
+summary(forward_naive)
+forward_test$naive = 32
+```
+
+Weighted Forward Naive
+```{r}
+weighted_forward_naive <- naive(weighted_forward_points, h = 6)
+summary(weighted_forward_naive)
+forward_test$naive = 10
+
+```
+
+Unweighted Forward ARIMA
+```{r}
+forward_arima <- auto.arima(forward_points)
+summary(forward_arima)
+fore_farima = forecast::forecast(forward_arima, h = 6)
+fore_farima = as.data.frame(fore_farima)
+```
+
+Weighted Forward ARIMA
+```{r}
+weighted_forward_arima <- auto.arima(weighted_forward_points)
+summary(weighted_forward_arima)
+weight_fore_farima = forecast::forecast(weighted_forward_arima, h = 6)
+weight_fore_farima = as.data.frame(weight_fore_farima)
+```
+
+Unweighted Forward Holt
+```{r}
+forward_holt <- holt(forward_points, h = 6)
+summary(forward_holt)
+df_fholt = as.data.frame(forward_holt)
+forward_holt75 <- holt(forward_points, h = 6, level = 0.75)
+summary(forward_holt75)
+df_fholt75 = as.data.frame(forward_holt75)
+```
+
+Weighted Forward Holt
+```{r}
+weighted_forward_holt <- holt(weighted_forward_points, h = 6)
+summary(weighted_forward_holt)
+weight_df_holt = as.data.frame(weighted_forward_holt)
+
+```
+
+Unweighted Forward TBATS
+```{r}
+forward_tbats <- tbats(forward_points)
+summary(forward_tbats)
+fore_ftbats = forecast::forecast(forward_tbats, h = 6)
+predict(fore_ftbats)
+
+forward_tbats75 <- tbats(forward_points)
+summary(forward_tbats75)
+fore75_ftbats = forecast::forecast(forward_tbats75, h = 6, level = 0.75)
+predict(fore75_ftbats)
+```
+
+Weighted Forward TBATS
+```{r}
+weight_forward_tbats <- tbats(weighted_forward_points)
+summary(weight_forward_tbats)
+weight_fore_ftbats= forecast::forecast(weight_forward_tbats, h = 6)
+predict(weight_fore_ftbats)
+
+weight_forward_tbats75 <- tbats(weighted_forward_points)
+summary(weight_forward_tbats75)
+weight_fore75_tbtats = forecast::forecast(weight_forward_tbats75, h = 6, level = 0.75)
+predict(weight_fore75_tbtats)
+
+```
+
+Unweighted Forward Smoothing
+```{r}
+forward_smooth <- ses(forward_points, h = 6)
+summary(forward_smooth)
+forward_test$smooth = 32
+```
+
+Unweighted Forward Smoothing Graph
+```{r}
+fsmooth_lo80 <- c(forward_points, 23.57, 20.08, 17.40, 15.14, 13.16, 11.36)
+fsmooth_hi80 <- c(forward_points, 40.43, 43.92, 46.60, 48.85, 50.84, 52.64)
+#svg("Exponential Smoothing Graphs for Forwards")
+plot(distance2, fsmooth_lo80, ylim = c(0, 60), col = "red", xlab = "Draft Distance", ylab = "Average Points")
+points(fsmooth_hi80, col = "red")
+points(forward_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Exponential Smoothing Projections", "Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.75)
+abline(h=0, v=0)
+
+```
+
+Weighted Forward Smoothing
+```{r}
+weight_forward_smooth <- ses(weighted_forward_points, h = 6)
+summary(weight_forward_smooth)
+```
+
+Weighted Forward Smoothing Graph
+```{r}
+dweight_smooth_lo80 <- c(weighted_forward_points, 6.93, 5.54, 4.48, 3.59, 2.80, 2.09)
+dweight_smooth_hi80 <- c(weighted_forward_points, 13.6, 14.98, 16.04, 16.94, 17.72, 18.44)
+plot(distance2, dweight_smooth_lo80, ylim = c(0, 25), col = "red")
+points(dweight_smooth_hi80, col = "red")
+points(weighted_forward_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Weighted Exponential Smoothing Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.55)
+abline(h=0, v=0)
+
+```
+
+```{r}
+svg("F_Exp_smooth.svg")
+par(mfrow = c(2, 2))
+plot(distance2, fsmooth_lo80, ylim = c(0, 60), col = "red", xlab = "Draft Distance", ylab = "Average Points")
+points(fsmooth_hi80, col = "red")
+points(forward_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Exponential Smoothing Projections", "Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.65)
+abline(h=0, v=0)
+
+plot(distance2, dweight_smooth_lo80, ylim = c(0, 25), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+points(dweight_smooth_hi80, col = "red")
+points(weighted_forward_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Weighted Exponential Smoothing Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.55)
+abline(h=0, v=0)
+dev.off()
+
+```
+
+Defense Subsets
+```{r}
+dy1 <- subset(def2_set, Draft_Distance == 1)
+dy2 <- subset(def2_set, Draft_Distance == 2)
+dy3 <- subset(def2_set, Draft_Distance == 3)
+dy4 <- subset(def2_set, Draft_Distance == 4)
+dy5 <- subset(def2_set, Draft_Distance == 5)
+dy6 <- subset(def2_set, Draft_Distance == 6)
+dy7 <- subset(def2_set, Draft_Distance == 7)
+dy8 <- subset(def2_set, Draft_Distance == 8)
+dy9 <- subset(def2_set, Draft_Distance == 9)
+dy10 <- subset(def2_set, Draft_Distance == 10)
+dy11 <- subset(def2_set, Draft_Distance == 11)
+dy12 <- subset(def2_set, Draft_Distance == 12)
+
+weight_def2 <- weight_work2 |> filter(Position == 'LHD' | Position == 'RHD')
+wdy1 <- subset(weight_def2, Draft_Distance == 1)
+wdy2 <- subset(weight_def2, Draft_Distance == 2)
+wdy3 <- subset(weight_def2, Draft_Distance == 3)
+wdy4 <- subset(weight_def2, Draft_Distance == 4)
+wdy5 <- subset(weight_def2, Draft_Distance == 5)
+wdy6 <- subset(weight_def2, Draft_Distance == 6)
+wdy7 <- subset(weight_def2, Draft_Distance == 7)
+wdy8 <- subset(weight_def2, Draft_Distance == 8)
+wdy9 <- subset(weight_def2, Draft_Distance == 9)
+wdy10 <- subset(weight_def2, Draft_Distance == 10)
+wdy11 <- subset(weight_def2, Draft_Distance == 11)
+wdy12 <- subset(weight_def2, Draft_Distance == 12)
+```
+
+Defense Averages
+```{r}
+#Unweighted Averages
+avg_df1 <- mean(dy1$Points)
+avg_df2 <- mean(dy2$Points)
+avg_df3 <- mean(dy3$Points)
+avg_df4 <- mean(dy4$Points)
+avg_df5 <- mean(dy5$Points)
+avg_df6 <- mean(dy6$Points)
+avg_df7 <- mean(dy7$Points)
+avg_df8 <- mean(dy8$Points)
+avg_df9 <- mean(dy9$Points)
+avg_df10 <- mean(dy10$Points)
+avg_df11 <- mean(dy11$Points)
+avg_df12 <- mean(dy12$Points)
+
+#Weighted Averages
+avg_wdf1 <- mean(wdy1$Weight_Points)
+avg_wdf2 <- mean(wdy2$Weight_Points)
+avg_wdf3 <- mean(wdy3$Weight_Points)
+avg_wdf4 <- mean(wdy4$Weight_Points)
+avg_wdf5 <- mean(wdy5$Weight_Points)
+avg_wdf6 <- mean(wdy6$Weight_Points)
+avg_wdf7 <- mean(wdy7$Weight_Points)
+avg_wdf8 <- mean(wdy8$Weight_Points)
+avg_wdf9 <- mean(wdy9$Weight_Points)
+avg_wdf10 <- mean(wdy10$Weight_Points)
+avg_wdf11 <- mean(wdy11$Weight_Points)
+avg_wdf12 <- mean(wdy12$Weight_Points)
+
+```
+
+Defense Points
+```{r}
+def_points <- c(avg_df1, avg_df2, avg_df3, avg_df4, avg_df5, avg_df6)
+def_points_actual <- c(def_points, avg_df7, avg_df8, avg_df9, avg_df10, avg_df11, avg_df12)
+
+weighted_def_points <- c(avg_wdf1, avg_wdf2, avg_wdf3, avg_wdf4, avg_wdf5, avg_wdf6)
+
+weighted_def_points_actual <- c(weighted_def_points, avg_wdf7, avg_wdf8, avg_wdf9, avg_wdf10, avg_wdf11, avg_wdf12)
+
+```
+
+Unweighted Defense Naive
+```{r}
+def_naive <- naive(def_points, h = 6)
+summary(def_naive)
+```
+
+Weighted Defence Naive
+```{r}
+weight_def_naive <- naive(weighted_def_points, h = 6)
+summary(weight_def_naive)
+```
+
+Unweighted Defense Exponential Smoothing
+```{r}
+def_smooth <- ses(def_points, h = 6)
+summary(def_smooth)
+```
+
+Weighted Defense Exponential Smoothing
+```{r}
+weight_def_smooth <- ses(weighted_def_points, h = 6)
+summary(weight_def_smooth)
+```
+
+Unweighted Defense Holt
+```{r}
+def_holt <- holt(def_points, h = 6)
+summary(def_holt)
+df_dholt = as.data.frame(def_holt)
+```
+
+Unweighted Defense Holt Graph
+```{r}
+holt_def_hi80 <- c(def_points, 33.36, 38.37, 43.43, 48.28, 53.29, 58.08)
+holt_def_lo80 <- c(def_points, 18.62, 22.52, 26.45, 30.41, 34.40, 38.41)
+plot(distance2, holt_def_hi80, ylim = c(0, 50), col = "red")
+points(holt_def_lo80, col = "red")
+points(def_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Unweighted Holt Projections", "Unweighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.65)
+abline(h=0, v=0)
+```
+
+Weighted Defense Holt
+```{r}
+weight_def_holt <- holt(weighted_def_points, h = 6)
+summary(weight_def_holt)
+wdf_dholt = as.data.frame(weight_def_holt)
+```
+
+Weighted Defense Holt Graph
+```{r}
+weight_holt_lo80 <- c(weighted_def_points, 3.30, 4.07, 4.83, 5.59, 6.35, 7.11)
+weight_holt_hi80 <- c(weighted_def_points, 6.70, 7.45, 8.22, 8.98, 9.75, 10.51)
+plot(distance2, weight_holt_lo80, ylim = c(0, 20), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+points(weight_holt_hi80, col = "red")
+points(weighted_def_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Weighted Holt Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.75)
+abline(h=0, v=0)
+```
+
+```{r}
+svg("def_holt.svg")
+par(mfrow = c(2, 2))
+
+plot(distance2, holt_def_hi80, ylim = c(0, 50), col = "red", xlab = "Draft Distance", ylab = "Average Points")
+points(holt_def_lo80, col = "red")
+points(def_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Unweighted Holt Projections", "Unweighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.65)
+abline(h=0, v=0)
+
+plot(distance2, weight_holt_lo80, ylim = c(0, 20), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+points(weight_holt_hi80, col = "red")
+points(weighted_def_points_actual, col = "blue")
+legend(x = "topleft", legend = c("Weighted Holt Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.75)
+abline(h=0, v=0)
+
+dev.off()
+```
+
+
+Unweighted Defense TBATS
+```{r}
+def_tbats <- tbats(def_points)
+summary(def_tbats)
+def_dtabts = forecast::forecast(def_tbats, h = 6)
+predict(def_dtabts)
+```
+
+Weighted Defense TBATS
+```{r}
+weight_def_tbats <- tbats(weighted_def_points)
+summary(weight_def_tbats)
+weight_def_dtabts = forecast::forecast(weight_def_tbats, h = 6)
+predict(weight_def_dtabts)
+```
+
+Logistic Regression Data
+```{r}
+set.seed(1)
+
+work_split <- initial_split(weight_work3, prop = 0.70)
+
+work_train <- training(work_split)
+work_test <- testing(work_split)
+```
+
+Logistic Regression for Reaching North America
+```{r}
+nhl_model <- glm(NHL~ Points + PIMs_per_Game + North_America, 
+             family = "binomial", data = work_train)
+summary(nhl_model)
+```
+
+Logistic Regression for Reaching North America Accuracy
+```{r}
+pscl::pR2(nhl_model)["McFadden"]
+caret::varImp(nhl_model)
+car::vif(nhl_model)
+```
+
+Logistic Regression for Reaching the NHL
+```{r}
+nhl_model <- glm(NHL~ Points + PIMs_per_Game + Draft_Distance + North_America, 
+             family = "binomial", data = work_train)
+summary(nhl_model)
+```
+
+Logistic Regression for Reaching the NHL Accuracy
+```{r}
+pscl::pR2(nhl_model)["McFadden"]
+caret::varImp(nhl_model)
+car::vif(nhl_model) 
+```
+
+Logistic Regression for Reaching the NHL Weighted
+```{r}
+weight_nhl_model <- glm(NHL~ Weight_Points + PIMs_per_Game + Draft_Distance + North_America, 
+             family = "binomial", data = work_train)
+summary(weight_nhl_model)
+```
+
+Weighted Logistic Regression for Reaching the NHL Accuracy
+```{r}
+pscl::pR2(weight_nhl_model)["McFadden"]
+caret::varImp(weight_nhl_model)
+car::vif(weight_nhl_model) 
+```
