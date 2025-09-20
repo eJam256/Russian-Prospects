@@ -76,122 +76,53 @@ dev.off()
 Weighted Points
 ```{r}
 MHL_set <- work_set |> filter(League_ID == 1)
-MHL_points <- sum(MHL_set$Points)
-
 KHL_set <- work_set |> filter(League_ID == 2)
-KHL_points <- sum(KHL_set$Points)
-
 VHL_set <- work_set |> filter(League_ID == 3)
-VHL_points <- sum(VHL_set$Points)
-
 NHL_set <- work_set |> filter(League_ID == 4)
-NHL_points <- sum(NHL_set$Points)
-
 CHL_set <- work_set |> filter(League_ID == 5)
-CHL_points <- sum(CHL_set$Points)
-
 AHL_set <- work_set |> filter(League_ID == 6)
-AHL_points <- sum(AHL_set$Points)
 
-all_points <- MHL_points + KHL_points + VHL_points + NHL_points + CHL_points + AHL_points
-
-MHL_Weight <- MHL_points/all_points
-KHL_Weight <- KHL_points/all_points
-VHL_Weight <- VHL_points/all_points
-NHL_Weight <- NHL_points/all_points
-CHL_Weight <- CHL_points/all_points
-AHL_Weight <- AHL_points/all_points
-
-
-MHL_set <- MHL_set |> mutate(Weight_Points = MHL_set$Points * MHL_Weight)
-MHL_set
-KHL_set <- KHL_set |> mutate(Weight_Points = KHL_set$Points * KHL_Weight)
-KHL_set
-VHL_set <- VHL_set |> mutate(Weight_Points = VHL_set$Points * VHL_Weight)
-VHL_set
-NHL_set <- NHL_set |> mutate(Weight_Points = NHL_set$Points * NHL_Weight)
-NHL_set
-CHL_set <- CHL_set |> mutate(Weight_Points = CHL_set$Points * CHL_Weight)
-CHL_set
-AHL_set <- AHL_set |> mutate(Weight_Points = AHL_set$Points * AHL_Weight)
-AHL_set
+MHL_set <- MHL_set |> mutate(Weight_Points = MHL_set$Points * 2)
+KHL_set <- KHL_set |> mutate(Weight_Points = KHL_set$Points * 3.5)
+VHL_set <- VHL_set |> mutate(Weight_Points = VHL_set$Points * 2.75)
+NHL_set <- NHL_set |> mutate(Weight_Points = NHL_set$Points * 4)
+CHL_set <- CHL_set |> mutate(Weight_Points = CHL_set$Points * 2)
+AHL_set <- AHL_set |> mutate(Weight_Points = AHL_set$Points * 3)
 
 weight_work <- bind_rows(MHL_set, KHL_set, VHL_set, NHL_set, CHL_set, AHL_set)
 
 
 MHL2_set <- work2_set |> filter(League_ID == 1)
-MHL2_points <- sum(MHL2_set$Points)
-
 KHL2_set <- work2_set |> filter(League_ID == 2)
-KHL2_points <- sum(KHL2_set$Points)
-
 VHL2_set <- work2_set |> filter(League_ID == 3)
-VHL2_points <- sum(VHL2_set$Points)
-
 NHL2_set <- work2_set |> filter(League_ID == 4)
-NHL2_points <- sum(NHL2_set$Points)
-
 CHL2_set <- work2_set |> filter(League_ID == 5)
-CHL2_points <- sum(CHL2_set$Points)
-
 AHL2_set <- work2_set |> filter(League_ID == 6)
-AHL2_points <- sum(AHL2_set$Points)
 
-all_points2 <- MHL2_points + KHL2_points + VHL2_points + NHL2_points + CHL2_points + AHL2_points
-
-MHL2_Weight <- MHL2_points/all_points2
-KHL2_Weight <- KHL2_points/all_points2
-VHL2_Weight <- VHL2_points/all_points2
-NHL2_Weight <- NHL2_points/all_points2
-CHL2_Weight <- CHL2_points/all_points2
-AHL2_Weight <- AHL2_points/all_points2
-
-MHL2_set <- MHL2_set |> mutate(Weight_Points = MHL2_set$Points * MHL2_Weight)
-KHL2_set <- KHL2_set |> mutate(Weight_Points = KHL2_set$Points * KHL2_Weight)
-VHL2_set <- VHL2_set |> mutate(Weight_Points = VHL2_set$Points * VHL2_Weight)
-NHL2_set <- NHL2_set |> mutate(Weight_Points = NHL2_set$Points * NHL2_Weight)
-CHL2_set <- CHL2_set |> mutate(Weight_Points = CHL2_set$Points * CHL2_Weight)
-AHL2_set <- AHL2_set |> mutate(Weight_Points = AHL2_set$Points * AHL2_Weight)
+MHL2_set <- MHL2_set |> mutate(Weight_Points = MHL2_set$Points * 2)
+KHL2_set <- KHL2_set |> mutate(Weight_Points = KHL2_set$Points * 3.5)
+VHL2_set <- VHL2_set |> mutate(Weight_Points = VHL2_set$Points * 2.75)
+NHL2_set <- NHL2_set |> mutate(Weight_Points = NHL2_set$Points * 4)
+CHL2_set <- CHL2_set |> mutate(Weight_Points = CHL2_set$Points * 2)
+AHL2_set <- AHL2_set |> mutate(Weight_Points = AHL2_set$Points * 3)
 
 weight_work2 <- bind_rows(MHL2_set, KHL2_set, VHL2_set, NHL2_set, CHL2_set, AHL2_set)
 
 MHL3_set <- work3_set |> filter(League_ID == 1)
-MHL3_points <- sum(MHL3_set$Points)
-
 KHL3_set <- work3_set |> filter(League_ID == 2)
-KHL3_points <- sum(KHL3_set$Points)
-
 VHL3_set <- work3_set |> filter(League_ID == 3)
-VHL3_points <- sum(VHL3_set$Points)
-
 NHL3_set <- work3_set |> filter(League_ID == 4)
-NHL3_points <- sum(NHL3_set$Points)
-
 CHL3_set <- work3_set |> filter(League_ID == 5)
-CHL3_points <- sum(CHL3_set$Points)
-
 AHL3_set <- work3_set |> filter(League_ID == 6)
-AHL3_points <- sum(AHL3_set$Points)
 
-all_points3 <- MHL3_points + KHL3_points + VHL3_points + NHL3_points + CHL3_points + AHL3_points
-
-MHL3_Weight <- MHL3_points/all_points3
-KHL3_Weight <- KHL3_points/all_points3
-VHL3_Weight <- VHL3_points/all_points3
-NHL3_Weight <- NHL3_points/all_points3
-CHL3_Weight <- CHL3_points/all_points3
-AHL3_Weight <- AHL3_points/all_points3
-
-MHL3_set <- MHL3_set |> mutate(Weight_Points = MHL3_set$Points * MHL3_Weight)
-KHL3_set <- KHL3_set |> mutate(Weight_Points = KHL3_set$Points * KHL3_Weight)
-VHL3_set <- VHL3_set |> mutate(Weight_Points = VHL3_set$Points * VHL3_Weight)
-NHL3_set <- NHL3_set |> mutate(Weight_Points = NHL3_set$Points * NHL3_Weight)
-CHL3_set <- CHL3_set |> mutate(Weight_Points = CHL3_set$Points * CHL3_Weight)
-AHL3_set <- AHL3_set |> mutate(Weight_Points = AHL3_set$Points * AHL3_Weight)
+MHL3_set <- MHL3_set |> mutate(Weight_Points = MHL3_set$Points * 2)
+KHL3_set <- KHL3_set |> mutate(Weight_Points = KHL3_set$Points * 3.5)
+VHL3_set <- VHL3_set |> mutate(Weight_Points = VHL3_set$Points * 2.75)
+NHL3_set <- NHL3_set |> mutate(Weight_Points = NHL3_set$Points * 4)
+CHL3_set <- CHL3_set |> mutate(Weight_Points = CHL3_set$Points * 2)
+AHL3_set <- AHL3_set |> mutate(Weight_Points = AHL3_set$Points * 3)
 
 weight_work3 <- bind_rows(MHL3_set, KHL3_set, VHL3_set, NHL3_set, CHL3_set, AHL3_set)
-
-
 ```
 
 Forward Subsets
@@ -376,9 +307,9 @@ summary(weight_forward_smooth)
 
 Weighted Forward Smoothing Graph
 ```{r}
-dweight_smooth_lo80 <- c(weighted_forward_points, 6.93, 5.54, 4.48, 3.59, 2.80, 2.09)
-dweight_smooth_hi80 <- c(weighted_forward_points, 13.6, 14.98, 16.04, 16.94, 17.72, 18.44)
-plot(distance2, dweight_smooth_lo80, ylim = c(0, 25), col = "red")
+dweight_smooth_lo80 <- c(weighted_forward_points, 83.89, 71.24, 61.53, 53.35, 46.14, 39.62)
+dweight_smooth_hi80 <- c(weighted_forward_points, 145.0, 157.65, 157.36, 175.55, 182.76, 189.28)
+plot(distance2, dweight_smooth_lo80, ylim = c(0, 190), col = "red")
 points(dweight_smooth_hi80, col = "red")
 points(weighted_forward_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Weighted Exponential Smoothing Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.55)
@@ -395,7 +326,7 @@ points(forward_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Exponential Smoothing Projections", "Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.65)
 abline(h=0, v=0)
 
-plot(distance2, dweight_smooth_lo80, ylim = c(0, 25), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+plot(distance2, dweight_smooth_lo80, ylim = c(0, 195), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
 points(dweight_smooth_hi80, col = "red")
 points(weighted_forward_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Weighted Exponential Smoothing Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.55)
@@ -528,9 +459,9 @@ wdf_dholt = as.data.frame(weight_def_holt)
 
 Weighted Defense Holt Graph
 ```{r}
-weight_holt_lo80 <- c(weighted_def_points, 3.30, 4.07, 4.83, 5.59, 6.35, 7.11)
-weight_holt_hi80 <- c(weighted_def_points, 6.70, 7.45, 8.22, 8.98, 9.75, 10.51)
-plot(distance2, weight_holt_lo80, ylim = c(0, 20), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+weight_holt_lo80 <- c(weighted_def_points, 53.87, 65.46, 77.05, 88.63, 100.22, 111.81)
+weight_holt_hi80 <- c(weighted_def_points, 97.61, 109.22, 120.84, 132.45, 144.06, 155.68)
+plot(distance2, weight_holt_lo80, ylim = c(0, 160), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
 points(weight_holt_hi80, col = "red")
 points(weighted_def_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Weighted Holt Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.75)
@@ -547,7 +478,7 @@ points(def_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Unweighted Holt Projections", "Unweighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.65)
 abline(h=0, v=0)
 
-plot(distance2, weight_holt_lo80, ylim = c(0, 20), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
+plot(distance2, weight_holt_lo80, ylim = c(0, 160), col = "red", xlab = "Draft Distance", ylab = "Average Weighted Points")
 points(weight_holt_hi80, col = "red")
 points(weighted_def_points_actual, col = "blue")
 legend(x = "topleft", legend = c("Weighted Holt Projections", "Weighted Actual Average Point Totals"), fill = c("red", "blue"), cex = 0.75)
